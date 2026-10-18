@@ -46,7 +46,7 @@ function Hero() {
       </div>
       <div className="visual" ref={visualRef}>
         <div className="scene-grid" aria-hidden="true"/>
-        <div className="scene-top"><span>FIG. 001 — SIGNAL / NOISE</span><span className="live-label"><span className="status-dot"/> LIVE STUDY</span></div>
+        <div className="scene-top"><span>FIG. 001 · SIGNAL / NOISE</span><span className="live-label"><span className="status-dot"/> LIVE STUDY</span></div>
         <div className="scene" role="img" aria-label={`Interactive 3D particle sculpture: ${modes[mode].name}. Drag to rotate. Use buttons below to change shape.`}><SceneBoundary><Suspense fallback={<div className="scene-loading">RESOLVING SIGNAL…</div>}><ParticleScene mode={mode} paused={paused || !visible || !tabActive}/></Suspense></SceneBoundary></div>
         <div className="scene-coordinate" aria-hidden="true">x 0.42<br/>y 0.86<br/>z 0.19</div>
         <div className="scene-caption"><Plus size={18}/><p aria-live="polite">{modes[mode].caption[0]}<br/>{modes[mode].caption[1]}</p></div>
@@ -74,7 +74,7 @@ function Work() {
     <div className="work-heading"><h2 id="work-title">Less friction.<br/><em>More conversation.</em></h2><p>A focus on useful experiences, thoughtful evaluation, and the human on the other side of the model.</p></div>
     <article className="project"><ConversationConcept/><div className="project-copy"><div className="project-meta"><span>01 / APPLIED AI</span><span className="pill"><span/> IN DEVELOPMENT</span></div><h3>A conversation.<br/>A little more confidence.</h3><p>{project.description}</p><div className="tags">{project.tags.map(t => <span key={t}>{t}</span>)}</div><div className="project-role"><small>MY ROLE</small><p>{project.role}<br/>{project.organization} · {project.period}</p></div><button className="text-link" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls="project-details">Inside the exploration {expanded ? <Minus size={20}/> : <Plus size={20}/>}</button></div></article>
     <div className="project-details" id="project-details" hidden={!expanded}>{project.details.map(d => <div key={d.label}><span>{d.label}</span><h4>{d.title}</h4><p>{d.text}</p></div>)}<p className="detail-note">Ongoing exploration described in my CV. No production results or performance benchmarks are claimed.</p></div>
-    <a className="repo-row" href={profile.github} target="_blank" rel="noopener noreferrer"><div><Command className="repo-icon" size={32}/><div><h3>Follow the work as it evolves.</h3><p>Code, experiments, and what's next — on GitHub.</p></div></div><span className="round-arrow"><ArrowUpRight size={24}/></span></a>
+    <a className="repo-row" href={profile.github} target="_blank" rel="noopener noreferrer"><div><Command className="repo-icon" size={32}/><div><h3>Follow the work as it evolves.</h3><p>Code, experiments, and what's next on GitHub.</p></div></div><span className="round-arrow"><ArrowUpRight size={24}/></span></a>
   </section>;
 }
 

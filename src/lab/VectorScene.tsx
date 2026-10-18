@@ -4,7 +4,7 @@ import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { EmbeddingResult } from './types';
 
-type Props = { embedding?: EmbeddingResult; selected: number; onSelect: (index: number) => void; paused: boolean; waveform?: Float32Array };
+type Props = { embedding?: EmbeddingResult; selected: number; onSelect: (index: number) => void; paused: boolean; waveform?: Float32Array; generation?: { tokens: number } };
 const palette = ['#b8edcb', '#b8edcb', '#e6ae78', '#e6ae78', '#b7c6ef', '#b7c6ef', '#ded9a4', '#ded9a4'];
 
 function NodeLabel({ index, selected, onSelect }: { index: number; selected: boolean; onSelect: () => void }) {
@@ -20,7 +20,7 @@ function NodeLabel({ index, selected, onSelect }: { index: number; selected: boo
   return <sprite position={[0, .27, 0]} scale={[.28, .19, 1]} onClick={event => { event.stopPropagation(); onSelect(); }}><spriteMaterial map={texture} depthTest={false}/></sprite>;
 }
 
-function Field({ embedding, selected, onSelect, paused, waveform }: Props) {
+function Field({ embedding, selected, onSelect, paused, waveform, generation }: Props) {
   const dust = useRef<THREE.Points>(null);
   const halo = useRef<THREE.Points>(null);
   const constellation = useMemo(() => {
@@ -46,10 +46,11 @@ function Field({ embedding, selected, onSelect, paused, waveform }: Props) {
       const u = random() * Math.PI * 2, v = random() * Math.PI * 2;
       const x = (i / 2400 - .5) * 5;
       const amp = waveform ? Math.abs(waveform[Math.floor(i / 2400 * waveform.length)]) * 3 + .08 : .45 + .35 * Math.sin(u * 3);
+      if (generation) { const theta = i / 2400 * Math.PI * 10; const radius = .65 + random() * .42; const phase = Math.min(generation.tokens, 64) * .04; points.set([Math.cos(theta + phase) * radius, (i / 2400 - .5) * 3.7, Math.sin(theta + phase) * radius], i * 3); continue; }
       points.set(waveform ? [x, Math.cos(v) * amp, Math.sin(v) * amp] : [(1.5 + .42 * Math.cos(v)) * Math.cos(u), (1.5 + .42 * Math.cos(v)) * Math.sin(u), .5 * Math.sin(v)], i * 3);
     }
     return points;
-  }, [waveform]);
+  }, [waveform, generation?.tokens]);
   useFrame((state, delta) => {
     if (paused) return;
     if (dust.current && !embedding) dust.current.rotation.z += Math.min(delta, .05) * .06;
@@ -59,7 +60,7 @@ function Field({ embedding, selected, onSelect, paused, waveform }: Props) {
   return <>
     <points ref={dust} rotation={embedding ? [0, 0, 0] : [-.3, .2, -.3]}>
       <bufferGeometry><bufferAttribute attach="attributes-position" args={[positions, 3]}/></bufferGeometry>
-      <pointsMaterial color="#b8edcb" size={embedding ? .008 : .015} transparent opacity={embedding ? .08 : .65} depthWrite={false} blending={THREE.AdditiveBlending}/>
+      <pointsMaterial color={generation ? "#e6ae78" : "#b8edcb"} size={embedding ? .008 : .015} transparent opacity={embedding ? .08 : .65} depthWrite={false} blending={THREE.AdditiveBlending}/>
     </points>
     {embedding && <>
       {constellation && <points ref={halo}><bufferGeometry><bufferAttribute attach="attributes-position" args={[constellation.positions, 3]}/><bufferAttribute attach="attributes-color" args={[constellation.colors, 3]}/></bufferGeometry><pointsMaterial vertexColors size={.012} transparent opacity={.5} depthWrite={false} blending={THREE.AdditiveBlending}/></points>}
@@ -84,7 +85,7 @@ export default function VectorScene(props: Props) {
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', update); };
   }, []);
   const paused = props.paused || !visible || !active;
-  return <div className="vector-canvas" ref={ref} role="img" aria-label={props.embedding ? 'Three-dimensional PCA projection of your sentence embeddings. Sentence controls and full-dimensional similarities are listed below.' : props.waveform ? 'Particle visualization sampled from generated speech audio.' : 'Decorative particle preview. Run an experiment to visualize model output.'}>
+  return <div className="vector-canvas" ref={ref} role="img" aria-label={props.embedding ? 'Three-dimensional PCA projection of your sentence embeddings. Sentence controls and full-dimensional similarities are listed below.' : props.generation ? 'Illustrative token-flow sculpture. Its phase follows the generated token count; it does not show model internals.' : props.waveform ? 'Particle visualization sampled from generated speech audio.' : 'Decorative particle preview. Run an experiment to visualize model output.'}>
     <Canvas camera={{ position: [0, 1, 6.7], fov: 48 }} dpr={[1, 1.5]} frameloop={paused ? 'demand' : 'always'} gl={{ alpha: true, antialias: false }}>
       <Field {...props} paused={paused}/><OrbitControls enablePan={false} enableZoom minDistance={3} maxDistance={11} enableDamping={!paused}/>
     </Canvas>

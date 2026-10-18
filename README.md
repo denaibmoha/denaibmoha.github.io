@@ -1,4 +1,4 @@
-# Mahmoud Denaib — Signal / Noise
+# Mahmoud Denaib | Signal / Noise
 
 A Vite + React + TypeScript portfolio for `denaibmoha.github.io`.
 
@@ -63,6 +63,6 @@ Fonts: Manrope and Instrument Serif, licensed under the SIL Open Font License. L
 
 ## Interactive AI lab
 
-The lab includes BGE embeddings with a real PCA/cosine explorer; Kitten Nano and Kokoro TTS; Whisper Tiny English transcription; and local Tesseract OCR. Precomputed example vectors are labelled explicitly. All inference is browser-local. See MODEL_NOTES.md for the evidence, measured results, privacy boundaries, limitations, and licenses.
+The lab includes BGE embeddings with a real PCA/cosine explorer; Kitten Nano and Kokoro TTS; Whisper Tiny English transcription; local Tesseract OCR; and an opt-in SmolLM2 135M int8 writing experiment with streamed output and token timing. The small LLM downloads about 136 MB of weights on first use and has limited instruction-following quality. Precomputed example vectors are labelled explicitly. All inference is browser-local. See MODEL_NOTES.md for the evidence, measured results, privacy boundaries, limitations, and licenses.
 
 Use npm ci --ignore-scripts for a browser-only dependency installation if native Node inference postinstall downloads are unnecessary. Generated public/ort and public/ocr files are gitignored and recreated before builds.

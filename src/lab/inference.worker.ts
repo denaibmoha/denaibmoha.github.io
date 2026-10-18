@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 import type { LabRequest, LabMessage, LabResult } from './types';
-import type { FeatureExtractionPipeline, AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import type { FeatureExtractionPipeline, AutomaticSpeechRecognitionPipeline, TextGenerationPipeline } from '@huggingface/transformers';
 import type { KokoroTTS } from 'kokoro-js';
 
 let embedder: FeatureExtractionPipeline | undefined;
 let recognizer: AutomaticSpeechRecognitionPipeline | undefined;
+let writer: TextGenerationPipeline | undefined;
 let speaker: KokoroTTS | undefined;
 let ocr: import('tesseract.js').Worker | undefined;
 let busy = false;
@@ -29,7 +30,28 @@ self.onmessage = async ({ data }: MessageEvent<LabRequest>) => {
       tf.env.backends.onnx.wasm!.wasmPaths = `${data.base}ort/`;
     }
     let result: LabResult;
-    if (data.mode === 'embed' && tf) {
+    if (data.mode === 'llm' && tf) {
+      if (!data.text?.trim() || data.text.length > 600) throw new Error('Enter a short English prompt, up to 600 characters.');
+      const maxTokens = data.maxTokens === 32 ? 32 : 64;
+      const createWriter = tf.pipeline as (task: 'text-generation', model: string, options: Record<string, unknown>) => Promise<TextGenerationPipeline>;
+      writer ??= await createWriter('text-generation', 'onnx-community/SmolLM2-135M-Instruct-ONNX', {
+        revision: 'b8a5c0f183b78c55955a5364f610c36668b5e681', device: 'wasm', dtype: 'q8', progress_callback: progress,
+      });
+      send({ type: 'progress', message: 'Generating on this device…' });
+      const inferenceStart = performance.now();
+      let response = '', tokens = 0, firstTokenMs: number | undefined;
+      const streamer = new tf.TextStreamer(writer.tokenizer, {
+        skip_prompt: true, skip_special_tokens: true,
+        token_callback_function: ids => { tokens += ids.length; firstTokenMs ??= performance.now() - inferenceStart; },
+        callback_function: chunk => { response += chunk; send({ type: 'token', text: response, tokens }); },
+      });
+      await writer([
+        { role: 'system', content: 'You are a helpful AI assistant named SmolLM, trained by Hugging Face.' },
+        { role: 'user', content: data.text.trim() },
+      ], { max_new_tokens: maxTokens, do_sample: false, repetition_penalty: 1.1, streamer });
+      if (!response.trim()) throw new Error('The model returned no text. Try rephrasing the prompt.');
+      result = { mode: 'llm', text: response.trim(), tokens, firstTokenMs, reachedLimit: tokens >= maxTokens, inferenceMs: performance.now() - inferenceStart, totalMs: performance.now() - start };
+    } else if (data.mode === 'embed' && tf) {
       const texts = data.texts ?? [];
       if (texts.length < 4 || texts.length > 16 || new Set(texts).size < 4 || texts.some(t => !t.trim() || t.length > 180)) throw new Error('Use 4–16 short sentences, up to 180 characters each.');
       const createEmbeddingPipeline = tf.pipeline as (task: 'feature-extraction', model: string, options: Record<string, unknown>) => Promise<FeatureExtractionPipeline>;

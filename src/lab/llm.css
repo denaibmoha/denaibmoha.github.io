@@ -1,0 +1,27 @@
+.lab-tabs > button { width: 20%; }
+.llm-description { margin-bottom: 15px; font-size: 11px; }
+.llm-examples { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 21px; }
+.llm-examples > button { background: #1c2c1c; border: 1px solid #46633b; border-radius: 20px; color: #b6cea7; font-size: 9px; padding: 7px 12px; }
+.llm-examples > button:hover:not(:disabled) { background: #30472a; border-color: #8baa75; }
+.llm-examples > button:disabled { opacity: .55; }
+.llm-response { border-top: 1px solid #41503b; background: #172317; padding: 28px 30px; }
+.llm-response-heading { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 19px; }
+.llm-response-heading h4 { font-size: 10px; font-weight: 500; letter-spacing: 1px; color: #bad3aa; }
+.llm-response-heading > span { font-family: monospace; font-size: 9px; color: #e6ae78; }
+.llm-response pre { color: #e0eada; font: 14px/1.9 Manrope, Arial, sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; min-height: 53px; }
+.llm-response .llm-pending { color: #8fa67e; font-size: 11px; }
+.llm-response .llm-caret { display: inline-block; width: 6px; height: 13px; margin-left: 4px; vertical-align: middle; background: #b8edcb; animation: status-pulse 1s infinite; }
+.llm-statistics { display: flex; flex-wrap: wrap; gap: 10px 28px; border-top: 1px solid #354b2d; margin-top: 25px; padding-top: 17px; }
+.llm-statistics > span { color: #90a77f; font-size: 9px; line-height: 1.9; }
+.llm-statistics strong { font-family: monospace; font-weight: 400; color: #bfd9ae; margin-right: 5px; }
+.llm-limit-note { color: #d1b78e; margin-top: 17px; font-size: 10px; line-height: 1.8; }
+.llm-output-note { color: #8ca27c; margin-top: 17px; font-size: 9px; line-height: 1.8; }
+@media (max-width: 1000px) { .lab-tabs > button > span { margin-left: 0; } .lab-tabs > button { gap: 7px; } }
+@media (max-width: 700px) {
+  .lab-tabs > button { gap: 5px; font-size: 8px; padding-inline: 4px; }
+  .lab-tabs > button svg { width: 12px; }
+  .llm-response { padding: 25px 21px; }
+  .llm-response pre { font-size: 13px; }
+  .llm-statistics { gap: 8px 18px; }
+}
+@media (max-width: 370px) { .lab-tabs > button { gap: 3px; font-size: 7px; } .lab-tabs > button svg { width: 10px; } }

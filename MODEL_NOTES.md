@@ -10,9 +10,10 @@ Reviewed 18 October 2026. These are small, reproducible smoke checks on the deve
 | TTS, default | KittenTTS Nano v0.8, fp32 | 56,767,095 bytes + 3,278,902-byte voices | 15M parameters, documented WASM support, smaller and faster in the local smoke test. No directly comparable human-preference evaluation was found in its model card; listen and compare voices. |
 | TTS, alternative | Kokoro 82M v1.0, int8 | 92,361,116 bytes + voice | Published human-preference arena snapshots provide a quality signal, but browser latency and int8 quality are separate questions. Available as an explicit alternative after its slower CPU result. |
 | STT | onnx-community/whisper-tiny.en, int8 | 10,124,993-byte encoder + 30,718,858-byte merged decoder | 39M parameters. English-specific, compact, and faster size tier than Base/Small in the authors' native tests. A100 timings are not browser timings. Noise, silence, music, and accents remain failure cases. |
+| Chat / short writing | onnx-community/SmolLM2-135M-Instruct-ONNX, int8 | 135,658,354 bytes + tokenizer | Original model IFEval 29.9; 360M reaches 41.0 but its int8 weights require 363,115,149 bytes. Prioritizes download budget over instruction reliability. English, 600-character prompt, 32/64 generated tokens, no conversation history. |
 | OCR | Tesseract.js 6.0.1 / Tesseract 5 WASM | Runtime + English LSTM data | Dedicated printed-text engine with reproducible browser benchmarks, substantially less download complexity than a generative vision model. English only here. Not a handwriting or PDF demo. |
 
-Supertonic 2 was also reviewed: its model card publishes promising native CPU/WebGPU latency, but those figures are not measurements of this browser, and its multi-model integration was not selected for this release. A chat LLM is deferred: it would add substantially larger downloads and memory requirements to a portfolio. The worker boundary can host a future opt-in experiment.
+Supertonic 2 was also reviewed: its model card publishes promising native CPU/WebGPU latency, but those figures are not measurements of this browser, and its multi-model integration was not selected for this release.
 
 ## Development browser smoke measurements
 
@@ -60,3 +61,13 @@ Single-thread WASM is deliberate because standard GitHub Pages does not set COOP
 - [JFK sample asset](https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/jfk.wav): historical US presidential speech used for the reproducible demo.
 
 Model weights remain at their respective upstream hosts. Consult the linked licenses for model-specific terms. Dependency notices accompany the bundled runtime assets.
+
+## Small LLM evaluation and browser validation
+
+SmolLM2 135M is an explicitly loaded writing experiment, not a factual assistant. Its original model reports IFEval 29.9, MMLU 29.3, and GSM8K 1.4; the 360M model reports IFEval 41.0. These evaluations are not independent tests of the quantized export. The download tradeoff is explicit: 135M int8 weights are 135,658,354 bytes, 360M int8 weights are 363,115,149 bytes, and Qwen2.5 0.5B int8 weights are 512,096,557 bytes. The 135M q4 export is actually larger at 180,581,125 bytes; a q4 label alone does not establish a smaller download.
+
+Pinned ONNX revision: `b8a5c0f183b78c55955a5364f610c36668b5e681`. Uses Transformers.js WASM CPU with one thread and the model-native system prompt. A worker streams plain text safely through React, with no HTML execution or file access. Cancelling or switching tools terminates the worker. The orange helix responds to emitted token count and is labelled illustrative; it is not a visualization of internal activations.
+
+Actual browser checks: the 32-token creative run took 2.50 seconds including setup, about 12.8 tokens/s including prefill, with first token after 0.60 seconds of inference. A summarization run produced “A tutor listens to a learner speak, correcting errors and suggesting new words for improvement.” in 1.99 seconds total (18 tokens). One initial setup/run took 9.40 seconds; cache/network state makes this unsuitable as a cold-download benchmark. The warmth rewrite failed its tone instruction, and another rewrite added an unsupported AM. This is a meaningful quality limit, so the UI calls it experimental and defaults to the successful summary example. Thirty-two tokens can truncate responses; an optional 64-token limit provides more room. These are smoke checks, not a general quality or speed benchmark.
+
+Primary sources: [135M original evaluation](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct#evaluation), [360M evaluation](https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct#evaluation), [135M ONNX export](https://huggingface.co/onnx-community/SmolLM2-135M-Instruct-ONNX/tree/main/onnx), [Qwen export sizes](https://huggingface.co/onnx-community/Qwen2.5-0.5B-Instruct/tree/main/onnx). SmolLM2 model license: Apache 2.0. Model weights stay upstream and are fetched only on Generate.

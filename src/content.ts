@@ -20,7 +20,7 @@ export const project = {
   description: 'Exploring an AI avatar that helps people practise speaking a language through natural conversation, with useful feedback along the way.',
   role: 'AI/ML Engineer · Part-time',
   organization: 'Stealth AI startup',
-  period: 'Mar 2026 — present',
+  period: 'Mar 2026 to present',
   tags: ['LLMs', 'Contextual retrieval', 'Voice AI'],
   details: [
     { label: '01 / DIALOGUE', title: 'Keep the conversation going.', text: 'Exploring LLM dialogue generation and GecToR for grammatical error correction. The goal is feedback that supports speaking practice.' },
@@ -30,9 +30,9 @@ export const project = {
 };
 
 export const journey = [
-  { period: '2026 — NOW', title: 'Computer Science', place: 'WSB University, Poland', detail: 'Security & Continuity of IT specialization' },
-  { period: '2025 — 2026', title: 'Understanding customers', place: 'Retail sales · Med’s Building Materials', detail: 'French & Arabic customer communication' },
-  { period: '2023 — 2024', title: 'Connecting the details', place: 'Support & accounting · Mentouri Construction', detail: 'Invoices, spreadsheets & business workflows' },
+  { period: '2026 to present', title: 'Computer Science', place: 'WSB University, Poland', detail: 'Security & Continuity of IT specialization' },
+  { period: '2025 to 2026', title: 'Understanding customers', place: 'Retail sales · Med’s Building Materials', detail: 'French & Arabic customer communication' },
+  { period: '2023 to 2024', title: 'Connecting the details', place: 'Support & accounting · Mentouri Construction', detail: 'Invoices, spreadsheets & business workflows' },
 ];
 
 export const modes = [

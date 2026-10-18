@@ -1,17 +1,19 @@
 import { lazy, Suspense, useState, useEffect, useRef, Component } from 'react';
 import type { ReactNode } from 'react';
-import { AudioLines, ScanText, Network, Mic, ArrowUpRight, Download, Play, Square, Pause, RotateCcw } from 'lucide-react';
+import { AudioLines, ScanText, Network, Mic, ArrowUpRight, Download, Play, Square, Pause, RotateCcw, MessageSquare } from 'lucide-react';
 import type { LabMode, LabResult, LabMessage, LabRequest, EmbeddingResult } from './types';
 import { models, exampleTexts, kittenConfig } from './models';
 import { decodeAudio, prepareImage, wavBlob } from './audio';
 import exampleEmbeddingData from './example-embedding.json';
 import './lab.css';
 import './controls.css';
+import './llm.css';
+import LLMInput from './LLMInput';
 const exampleEmbedding = exampleEmbeddingData as EmbeddingResult;
 
 const VectorScene = lazy(() => import('./VectorScene'));
 const base = new URL(import.meta.env.BASE_URL, document.baseURI).href;
-const tabs = [{ id: 'embed', label: 'Vector space', icon: Network }, { id: 'tts', label: 'Speak', icon: AudioLines }, { id: 'stt', label: 'Listen', icon: Mic }, { id: 'ocr', label: 'Read', icon: ScanText }] as const;
+const tabs = [{ id: 'embed', label: 'Vector space', icon: Network }, { id: 'tts', label: 'Speak', icon: AudioLines }, { id: 'stt', label: 'Listen', icon: Mic }, { id: 'ocr', label: 'Read', icon: ScanText }, { id: 'llm', label: 'Chat', icon: MessageSquare }] as const;
 class VisualBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -20,6 +22,9 @@ class VisualBoundary extends Component<{ children: ReactNode }, { failed: boolea
 
 export default function AILab() {
   const [mode, setMode] = useState<LabMode>('embed');
+  const [prompt, setPrompt] = useState('Summarize in one sentence: A tutor listens to a learner speak. The tutor corrects mistakes and suggests new words.');
+  const [maxTokens, setMaxTokens] = useState<32 | 64>(32);
+  const [draft, setDraft] = useState(''), [draftTokens, setDraftTokens] = useState(0);
   const [sentences, setSentences] = useState(exampleTexts.join('\n'));
   const [text, setText] = useState('Good AI starts with understanding people. Stay curious, and build something useful.');
   const [ttsEngine, setTTSEngine] = useState<'kitten' | 'kokoro'>('kitten');
@@ -42,13 +47,15 @@ export default function AILab() {
   useEffect(() => () => { if (audioURL) URL.revokeObjectURL(audioURL); }, [audioURL]);
   useEffect(() => () => { if (imageURL.startsWith('blob:')) URL.revokeObjectURL(imageURL); }, [imageURL]);
   const cancel = () => { generation.current++; worker.current?.terminate(); worker.current = null; setBusy(false); setPercent(undefined); setStatus('Stopped. Model memory released; browser caches may retain downloaded weights.'); };
-  const changeMode = (next: LabMode) => { if (next === mode) return; cancel(); cleanupRecording(); setRecording(false); setMicPending(false); setMode(next); setError(''); setResult(null); setAudioURL(''); setWaveform(undefined); setSelected(0); setStatus('No model loaded. Choose an input, then run locally.'); };
+  const changeMode = (next: LabMode) => { if (next === mode) return; cancel(); cleanupRecording(); setRecording(false); setMicPending(false); setMode(next); setError(''); setResult(null); setAudioURL(''); setWaveform(undefined); setSelected(0); setDraft(''); setDraftTokens(0); setStatus('No model loaded. Choose an input, then run locally.'); };
 
   async function run() {
     setBusy(true); setError(''); setPercent(undefined); setStatus('Preparing input…');
+    if (mode === 'llm') { setDraft(''); setDraftTokens(0); setResult(null); }
     const job = ++generation.current;
     try {
       const request: LabRequest = { mode, base };
+      if (mode === 'llm') { if (!prompt.trim() || prompt.length > 600) throw new Error('Enter a short English prompt, up to 600 characters.'); request.text = prompt; request.maxTokens = maxTokens; }
       if (mode === 'embed') { request.texts = sentences.split('\n').map(t => t.trim()).filter(Boolean); if (request.texts.length < 4 || request.texts.length > 16 || new Set(request.texts).size < 4 || request.texts.some(t => t.length > 180)) throw new Error('Use 4–16 sentences with at least four distinct entries, one per line, up to 180 characters each.'); }
       if (mode === 'tts') { request.text = text; request.voice = voice; request.ttsEngine = ttsEngine; if (!text.trim()) throw new Error('Write something to say first.'); }
       if (mode === 'stt') { const blob: Blob = clip ? clip : await fetch(`${base}jfk.wav`).then(r => { if (!r.ok) throw new Error('Could not load the sample.'); return r.blob(); }); request.audio = await decodeAudio(blob); if (generation.current === job) setWaveform(request.audio); }
@@ -58,6 +65,7 @@ export default function AILab() {
       worker.current.onmessage = ({ data }: MessageEvent<LabMessage>) => {
         if (generation.current !== job) return;
         if (data.type === 'progress') { setStatus(data.message); setPercent(data.percent); }
+        else if (data.type === 'token') { setDraft(data.text); setDraftTokens(data.tokens); setPercent(undefined); }
         else if (data.type === 'error') { setBusy(false); setError(data.message); setStatus('Experiment stopped. You can retry or switch tools.'); setPercent(undefined); worker.current?.terminate(); worker.current = null; }
         else { setResult(data.result); setSelected(0); setBusy(false); setPercent(undefined); setStatus('Complete. Inference ran on this device.'); if (data.result.audio) { setWaveform(data.result.audio); setAudioURL(URL.createObjectURL(wavBlob(data.result.audio, data.result.sampleRate!))); } }
       };
@@ -93,11 +101,12 @@ export default function AILab() {
   return <section className="ai-lab section" id="lab" aria-labelledby="lab-title">
     <div className="section-heading"><p className="eyebrow">02 / THE INTERACTIVE LAB</p><span className="small-note">SMALL MODELS. REAL POSSIBILITIES.</span></div>
     <div className="lab-heading"><h2 id="lab-title">Don't just read.<br/><em>Try a little intelligence.</em></h2><p>A small playground for the ideas behind my work. Real models, running right here in your browser.</p></div>
-    <div className="lab-shell"><div className="lab-tabs" role="group" aria-label="Choose AI experiment">{tabs.map(tab => <button key={tab.id} className={mode === tab.id ? 'active' : ''} aria-pressed={mode === tab.id} onClick={() => changeMode(tab.id)}><tab.icon size={16}/>{tab.label}<span>{tab.id === 'embed' ? '01' : tab.id === 'tts' ? '02' : tab.id === 'stt' ? '03' : '04'}</span></button>)}</div>
+    <div className="lab-shell"><div className="lab-tabs" role="group" aria-label="Choose AI experiment">{tabs.map(tab => <button key={tab.id} className={mode === tab.id ? 'active' : ''} aria-pressed={mode === tab.id} onClick={() => changeMode(tab.id)}><tab.icon size={16}/>{tab.label}<span>{tab.id === 'embed' ? '01' : tab.id === 'tts' ? '02' : tab.id === 'stt' ? '03' : tab.id === 'ocr' ? '04' : '05'}</span></button>)}</div>
     <div className="lab-layout"><div className="lab-visual"><div className="lab-figure"><span>{config.subtitle}</span><span>{embedding ? `${embedding.vectors[0].length}D → 3D / PCA` : result ? 'LOCAL MODEL OUTPUT' : 'PARTICLE STUDY / PREVIEW'}</span></div>
-      {mode === 'ocr' ? <div className={`ocr-preview ${busy ? 'scanning' : ''}`}><img src={imageURL} alt={image ? 'Your selected image for local text recognition' : 'Printed English sample for OCR'}/>{busy && <span className="scan-line"/>}</div> : <VisualBoundary><Suspense fallback={<div className="lab-visual-fallback">Opening the visual explorer…</div>}><VectorScene embedding={embedding} selected={selected} onSelect={setSelected} paused={paused || busy} waveform={waveform}/></Suspense></VisualBoundary>}
-      <div className="lab-visual-bottom"><span>{mode === 'ocr' ? 'YOUR IMAGE STAYS ON THIS DEVICE' : embedding ? `${(embedding.variance * 100).toFixed(1)}% VARIANCE SHOWN · DRAG / ZOOM` : waveform ? 'PARTICLES SAMPLED FROM AUDIO' : 'DECORATIVE PREVIEW · RUN TO SEE REAL OUTPUT'}</span>{mode !== 'ocr' && <button onClick={() => setPaused(!paused)} aria-label={paused ? 'Play lab visual' : 'Pause lab visual'}>{paused ? <Play size={14}/> : <Pause size={14}/>}</button>}</div>
+      {mode === 'ocr' ? <div className={`ocr-preview ${busy ? 'scanning' : ''}`}><img src={imageURL} alt={image ? 'Your selected image for local text recognition' : 'Printed English sample for OCR'}/>{busy && <span className="scan-line"/>}</div> : <VisualBoundary><Suspense fallback={<div className="lab-visual-fallback">Opening the visual explorer…</div>}><VectorScene embedding={embedding} selected={selected} onSelect={setSelected} paused={paused || busy} waveform={waveform} generation={mode === 'llm' ? { tokens: result?.tokens ?? draftTokens } : undefined}/></Suspense></VisualBoundary>}
+      <div className="lab-visual-bottom"><span>{mode === 'ocr' ? 'YOUR IMAGE STAYS ON THIS DEVICE' : mode === 'llm' ? 'ILLUSTRATIVE TOKEN FLOW · NOT MODEL INTERNALS' : embedding ? `${(embedding.variance * 100).toFixed(1)}% VARIANCE SHOWN · DRAG / ZOOM` : waveform ? 'PARTICLES SAMPLED FROM AUDIO' : 'DECORATIVE PREVIEW · RUN TO SEE REAL OUTPUT'}</span>{mode !== 'ocr' && <button onClick={() => setPaused(!paused)} aria-label={paused ? 'Play lab visual' : 'Pause lab visual'}>{paused ? <Play size={14}/> : <Pause size={14}/>}</button>}</div>
     </div><div className="lab-input"><span className="lab-kicker">{config.model}</span><h3>{config.title}</h3>
+      {mode === 'llm' && <LLMInput prompt={prompt} onPrompt={setPrompt} maxTokens={maxTokens} onMaxTokens={setMaxTokens} busy={busy}/>}
       {mode === 'embed' && <><label htmlFor="sentences">Your sentences <span>4–16 lines · English</span></label><textarea id="sentences" rows={8} maxLength={3000} value={sentences} onChange={e => setSentences(e.target.value)} disabled={busy}/><p className="input-tip">Try paraphrases, opposites, and completely different topics.</p></>}
       {mode === 'tts' && <><label htmlFor="speech-text">What should it say? <span>{text.length}/280</span></label><textarea id="speech-text" rows={5} maxLength={280} value={text} onChange={e => setText(e.target.value)} disabled={busy}/><label htmlFor="tts-engine">Model</label><select id="tts-engine" value={ttsEngine} onChange={e => { cancel(); setTTSEngine(e.target.value as typeof ttsEngine); setResult(null); setAudioURL(''); setWaveform(undefined); }} disabled={busy}><option value="kitten">Kitten Nano · smaller / faster</option><option value="kokoro">Kokoro · expressive / slower</option></select><label htmlFor="voice">Voice</label><select id="voice" value={voice} onChange={e => setVoice(e.target.value as typeof voice)} disabled={busy}><option value="af_heart">{ttsEngine === 'kitten' ? 'Bella · English' : 'Heart · American English'}</option><option value="bm_george">{ttsEngine === 'kitten' ? 'Jasper · English' : 'George · British English'}</option></select></>}
       {mode === 'stt' && <><p className="lab-description">Upload a short clip, record a thought, or try the built-in JFK speech sample.</p><div className="lab-file-row"><button onClick={() => inputRef.current?.click()} disabled={busy || recording || micPending}>Choose audio <ArrowUpRight size={15}/></button><button onClick={toggleRecording} disabled={busy || micPending}>{recording ? <Square size={14}/> : <Mic size={14}/>} {recording ? `Stop · ${elapsed}s` : 'Record'}</button></div><input ref={inputRef} type="file" accept="audio/*" hidden onChange={e => { const f = e.target.files?.[0]; if (f) { if (f.size > 10 * 1024 * 1024) setError('Use an audio file under 10 MB.'); else { setClip(f); setClipName(f.name); setError(''); } } }}/><div className="selected-file"><AudioLines size={20}/><span>{clipName}</span></div><button className="sample-reset" disabled={busy || recording || micPending} onClick={() => { setClip(null); setClipName('JFK sample · 11 seconds'); }}><RotateCcw size={12}/> Use built-in sample</button>{!clip && <audio controls preload="none" src={`${base}jfk.wav`} aria-label="JFK speech sample"/>}</>}
@@ -107,7 +116,8 @@ export default function AILab() {
       <div className="lab-status" role="status"><span className={busy ? 'busy' : ''}/><p>{status}{percent !== undefined && ` · ${Math.round(percent)}% of this file`}</p></div>
       {error && <p className="lab-error" role="alert">{error}</p>}
     </div></div>
-    {(result || embedding) && <div className="lab-results"><div className="result-heading"><span>{result ? `YOUR RESULT / ${mode.toUpperCase()}` : 'PRECOMPUTED EXAMPLE / BGE SMALL'}</span><span>{result ? `${(result.inferenceMs / 1000).toFixed(2)}s inference · ${(result.totalMs / 1000).toFixed(2)}s including setup` : 'Run the model above to map your own sentences.'}</span></div>
+    {mode === 'llm' && (busy || draft || result?.mode === 'llm') && <div className="llm-response"><div className="llm-response-heading"><h4>{busy ? 'WRITING LOCALLY' : result?.mode === 'llm' ? 'MODEL RESPONSE' : 'PARTIAL RESPONSE / STOPPED'}</h4><span>{result?.tokens ?? draftTokens} tokens</span></div><pre>{result?.text ?? (draft || <span className="llm-pending">{percent !== undefined ? 'Downloading model files…' : 'Preparing the model…'}</span>)}{busy && <span className="llm-caret" aria-hidden="true"/>}</pre>{result?.mode === 'llm' && <div className="llm-statistics"><span><strong>{((result.firstTokenMs ?? 0) / 1000).toFixed(2)}s</strong>first token after setup</span><span><strong>{((result.tokens ?? 0) / (result.inferenceMs / 1000)).toFixed(1)}</strong>tokens/s, including prefill</span><span><strong>{(result.totalMs / 1000).toFixed(2)}s</strong>including model setup</span></div>}{result?.reachedLimit && <p className="llm-limit-note">Reached the {maxTokens}-token limit. The response may end mid-sentence.</p>}<p className="llm-output-note">Generated by a 135M-parameter model on your device. It can misunderstand instructions or invent details. Short writing experiments work best.</p></div>}
+    {mode !== 'llm' && (result || embedding) && <div className="lab-results"><div className="result-heading"><span>{result ? `YOUR RESULT / ${mode.toUpperCase()}` : 'PRECOMPUTED EXAMPLE / BGE SMALL'}</span><span>{result ? `${(result.inferenceMs / 1000).toFixed(2)}s inference · ${(result.totalMs / 1000).toFixed(2)}s including setup` : 'Run the model above to map your own sentences.'}</span></div>
       {embedding && <><div className="vector-results"><div className="sentence-list" role="group" aria-label="Select a sentence to compare">{embedding.texts.map((sentence, i) => <button key={i} onClick={() => setSelected(i)} className={selected === i ? 'active' : ''} aria-pressed={selected === i}><span>{String(i + 1).padStart(2, '0')}</span>{sentence}</button>)}</div><div className="similarities"><h4>Closest in meaning to sentence {selected + 1}</h4><p>Cosine similarity in the original 384D space</p>{neighbors.slice(0, 4).map(n => <div key={n.i}><span>{n.i + 1}. {embedding.texts[n.i]}</span><strong>{n.score.toFixed(3)}</strong></div>)}<button className="export-vectors" onClick={exportVectors}>Export actual vectors <Download size={13}/></button></div></div><p className="projection-note">PCA preserves {(embedding.variance * 100).toFixed(1)}% of this set's variance. The map changes when the sentence set changes. Node colours and glow are decorative; similarity rankings come from the full model output.</p></>}
       {audioURL && result && <div className="generated-audio"><audio controls src={audioURL} aria-label="Generated local speech"/><a href={audioURL} download="generated-speech.wav">Download WAV <Download size={14}/></a><span>{((result.audio?.length ?? 0) / result.sampleRate!).toFixed(1)}s audio · {((result.inferenceMs / 1000) / ((result.audio?.length ?? 1) / result.sampleRate!)).toFixed(2)}× real-time factor (lower is faster)</span></div>}
       {result?.text !== undefined && <div className="recognized-text"><h4>{mode === 'ocr' ? 'Recognized text' : 'Transcript'}</h4><pre>{result.text || 'No text detected. Try a clearer input.'}</pre>{result.confidence !== undefined && <p>Engine confidence: {result.confidence.toFixed(1)}/100 · not a calibrated accuracy score.</p>}</div>}
