@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+
+public/ort/
+public/ocr/
+public/inference-licenses/
