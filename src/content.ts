@@ -6,7 +6,7 @@ export const profile = {
   linkedin: 'https://www.linkedin.com/in/mahmouddenaib04',
   location: 'Kraków, Poland',
   portrait: `${import.meta.env.BASE_URL}mahmoud-denaib.jpg`,
-  resume: `${import.meta.env.BASE_URL}Mahmoud-Denaib-CV.pdf`,
+  resume: `${import.meta.env.BASE_URL}Mahmoud-Denaib-CV.pdf?v=aae212075882`,
 };
 
 export const expertise = [
@@ -40,3 +40,4 @@ export const modes = [
   { name: 'Memory', label: '02 / MEMORY', caption: ['Every connection', 'adds another layer.'] },
   { name: 'Voice', label: '03 / VOICE', caption: ['An idea becomes a signal.', 'A signal becomes a voice.'] },
 ] as const;
+
