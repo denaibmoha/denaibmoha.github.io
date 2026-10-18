@@ -1,0 +1,64 @@
+/* Native controls follow the same palette as the experiment panels. */
+html {
+  color-scheme: dark;
+  scrollbar-gutter: stable;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #59704f #121b14;
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: #121b14; border-radius: 10px; }
+*::-webkit-scrollbar-thumb { background: #59704f; border: 2px solid #121b14; border-radius: 10px; }
+*::-webkit-scrollbar-thumb:hover { background: #a5c794; }
+*::-webkit-scrollbar-corner { background: #121b14; }
+
+.lab-input textarea,
+.lab-input select {
+  color-scheme: dark;
+  border-radius: 5px;
+  caret-color: var(--mint);
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.lab-input textarea {
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: auto;
+  scroll-behavior: auto;
+  min-height: 150px;
+  max-height: 360px;
+  line-height: 2;
+  padding: 15px 16px;
+}
+
+.lab-input textarea:hover,
+.lab-input select:hover { border-color: #738b64; }
+
+.lab-input textarea:focus,
+.lab-input select:focus {
+  outline: none;
+  border-color: var(--mint);
+  box-shadow: 0 0 0 3px #b8edcb12;
+}
+
+.lab-input textarea::-webkit-resizer {
+  background: linear-gradient(135deg, transparent 0 45%, #657e55 46% 51%, transparent 52% 62%, #657e55 63% 68%, transparent 69%);
+}
+
+.lab-input select {
+  appearance: none;
+  padding: 12px 38px 12px 15px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23b8edcb' stroke-width='1.8'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.lab-input select option { background: #172319; color: #cfdfc3; }
+.lab-input audio, .generated-audio audio { color-scheme: dark; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-input textarea, .lab-input select { transition: none; }
+}

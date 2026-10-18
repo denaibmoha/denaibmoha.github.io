@@ -6,6 +6,7 @@ import { models, exampleTexts, kittenConfig } from './models';
 import { decodeAudio, prepareImage, wavBlob } from './audio';
 import exampleEmbeddingData from './example-embedding.json';
 import './lab.css';
+import './controls.css';
 const exampleEmbedding = exampleEmbeddingData as EmbeddingResult;
 
 const VectorScene = lazy(() => import('./VectorScene'));
@@ -115,3 +116,4 @@ export default function AILab() {
     <p className="lab-privacy">Inputs are processed on your device and are not uploaded by this lab. Model files come from Hugging Face; OCR language data comes from jsDelivr. Those hosts receive download requests. No API key required. A recent desktop browser is recommended; speed and memory use vary by device.</p>
   </section>;
 }
+
